@@ -63,7 +63,7 @@ export default function MapPage() {
       </div>
 
       <div className="flex-1 relative rounded-xl border border-zinc-800 overflow-hidden shadow-2xl shadow-emerald-500/5">
-        <Map data={networkData} />
+        <Map data={networkData} onSelectCustomer={() => {}} />
         
         {/* Map Legend Overlay */}
         <div className="absolute bottom-6 right-6 z-[1000] bg-zinc-950/80 backdrop-blur-md border border-zinc-800 p-4 rounded-xl space-y-3">
