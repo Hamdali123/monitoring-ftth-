@@ -77,22 +77,28 @@ export default function Map({ data, onSelectCustomer }: MapProps) {
         className="w-full h-full z-0"
       >
         <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="Google Style Standard">
+          <LayersControl.BaseLayer checked name="Google Hybrid (Satellite + Roads)">
             <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; Google Maps'
+              url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              maxZoom={22}
+              maxNativeZoom={20}
             />
           </LayersControl.BaseLayer>
           <LayersControl.BaseLayer name="Satellite View">
             <TileLayer
               attribution='&copy; Esri'
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={22}
+              maxNativeZoom={19}
             />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Hybrid (Roads + Satellite)">
+          <LayersControl.BaseLayer name="Street View (Standard)">
             <TileLayer
-              attribution='&copy; Google'
-              url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              attribution='&copy; OpenStreetMap'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maxZoom={20}
+              maxNativeZoom={19}
             />
           </LayersControl.BaseLayer>
         </LayersControl>
