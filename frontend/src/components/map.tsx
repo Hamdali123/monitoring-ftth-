@@ -80,9 +80,10 @@ export default function Map({ data, onSelectCustomer }: MapProps) {
           <LayersControl.BaseLayer checked name="Google Hybrid (Satellite + Roads)">
             <TileLayer
               attribution='&copy; Google Maps'
-              url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              url="https://mt1.google.com/vt/lyrs=y&scale=2&x={x}&y={y}&z={z}"
               maxZoom={22}
               maxNativeZoom={20}
+              detectRetina={true}
             />
           </LayersControl.BaseLayer>
           <LayersControl.BaseLayer name="Satellite View">

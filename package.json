@@ -8,7 +8,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "build": "prisma generate",
     "start": "tsx src/index.ts",
+    "seed": "tsx seed-office.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
