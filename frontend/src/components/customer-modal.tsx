@@ -33,14 +33,14 @@ export default function CustomerModal({ customer, onClose }: CustomerModalProps)
   const statusBg = customer.status === "ONLINE" ? "bg-emerald-500/10" : "bg-rose-500/10";
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 sm:p-12 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-12 animate-in fade-in duration-300">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={onClose} />
       
-      <div className="relative w-full max-w-5xl bg-[#050505] border border-zinc-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-full max-h-[850px] animate-in zoom-in-95 duration-500">
+      <div className="relative w-full max-w-5xl bg-[#050505] border border-zinc-900 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row h-full max-h-[90vh] md:max-h-[850px] animate-in zoom-in-95 duration-500">
         
-        {/* Left Side: Identity & Map View Placeholder */}
-        <div className="md:w-2/5 p-12 border-b md:border-b-0 md:border-r border-zinc-900 flex flex-col justify-between">
-           <div className="space-y-10">
+        {/* Left Side: Identity & Actions */}
+        <div className="w-full md:w-2/5 p-6 md:p-12 border-b md:border-b-0 md:border-r border-zinc-900 flex flex-col justify-between shrink-0">
+           <div className="space-y-6 md:space-y-10">
               <div className="flex items-center gap-4">
                  <div className="w-16 h-16 bg-zinc-900 rounded-3xl flex items-center justify-center border border-zinc-800 shadow-xl">
                     <Wifi className={statusColor} size={28} />
@@ -165,8 +165,8 @@ export default function CustomerModal({ customer, onClose }: CustomerModalProps)
         </div>
 
         {/* Right Side: Metrics & History */}
-        <div className="flex-1 p-12 bg-zinc-950/20 overflow-y-auto">
-           <div className="flex items-center justify-between mb-10">
+        <div className="flex-1 p-6 md:p-12 bg-zinc-950/20 overflow-y-auto">
+           <div className="flex items-center justify-between mb-8 md:mb-10">
               <h3 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-3">
                  <History size={16} /> Signal Intelligence
               </h3>

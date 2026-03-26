@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Search, Zap, CheckCircle, Info, AlertTriangle, XCircle, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Menu } from "lucide-react";
+import { useSidebar } from "@/context/sidebar-context";
 
 export function Navbar() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const { toggle } = useSidebar();
   const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -22,12 +29,6 @@ export function Navbar() {
       console.error("Failed to fetch notifications:", err);
     }
   };
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
-    return () => clearInterval(interval);
-  }, []);
 
   const markAsRead = async (id: string) => {
     try {
@@ -54,19 +55,28 @@ export function Navbar() {
   };
 
   return (
-    <header className="h-24 border-b border-zinc-900/50 bg-[#050505]/80 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-[100]">
-      <div className="flex-1 max-w-xl">
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search network nodes, ODPs, or customers..." 
-            className="w-full bg-zinc-900/30 border border-zinc-800/50 rounded-2xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-zinc-700 font-medium"
-          />
+    <header className="h-20 md:h-24 border-b border-zinc-900/50 bg-[#050505]/80 backdrop-blur-md px-4 md:px-8 flex items-center justify-between sticky top-0 z-[100]">
+      <div className="flex items-center gap-4 flex-1">
+        <button 
+          onClick={toggle}
+          className="lg:hidden p-2 text-zinc-500 hover:text-white transition-colors"
+        >
+          <Menu size={24} />
+        </button>
+
+        <div className="hidden md:block flex-1 max-w-xl">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search network nodes..." 
+              className="w-full bg-zinc-900/30 border border-zinc-800/50 rounded-2xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-zinc-700 font-medium"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
         <div className="relative">
           <button 
             onClick={() => setIsOpen(!isOpen)}

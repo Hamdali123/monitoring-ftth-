@@ -96,65 +96,67 @@ export default function CustomersPage() {
 
       {/* Customer Table List */}
       <div className="bg-[#050505] border border-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl">
-         <table className="w-full text-left border-collapse">
-            <thead>
-               <tr className="border-b border-zinc-900 bg-zinc-950/20">
-                  <th className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Subscriber</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">PPPoE Account</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Live Signal</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Actions</th>
-               </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-900/50">
-               {loading ? (
-                 [1,2,3,4,5].map(i => <tr key={i} className="animate-pulse px-10 py-6 bg-zinc-900/10 h-24" />)
-               ) : (
-                 filtered.map((c) => {
-                    const status = c.status || c.metrics?.[0]?.status || 'OFFLINE';
-                    const isOnline = status === 'ONLINE';
-                    return (
-                      <tr key={c.id} className="group hover:bg-zinc-900/20 transition-all cursor-default">
-                          <td className="px-10 py-6">
-                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-black text-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all duration-300">
-                                   {c.name.slice(0, 2).toUpperCase()}
+         <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+               <thead>
+                  <tr className="border-b border-zinc-900 bg-zinc-950/20 text-nowrap">
+                     <th className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Subscriber</th>
+                     <th className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">PPPoE Account</th>
+                     <th className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Status</th>
+                     <th className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Live Signal</th>
+                     <th className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Actions</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-zinc-900/50">
+                  {loading ? (
+                    [1,2,3,4,5].map(i => <tr key={i} className="animate-pulse px-10 py-6 bg-zinc-900/10 h-24" />)
+                  ) : (
+                    filtered.map((c) => {
+                       const status = c.status || c.metrics?.[0]?.status || 'OFFLINE';
+                       const isOnline = status === 'ONLINE';
+                       return (
+                         <tr key={c.id} className="group hover:bg-zinc-900/20 transition-all cursor-default">
+                             <td className="px-6 md:px-10 py-6">
+                                <div className="flex items-center gap-4">
+                                   <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-black text-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all duration-300 shrink-0">
+                                      {c.name.slice(0, 2).toUpperCase()}
+                                   </div>
+                                   <div className="flex flex-col min-w-0">
+                                      <span className="text-sm font-black text-white group-hover:text-blue-500 transition-colors italic uppercase truncate">{c.name}</span>
+                                      <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest truncate">{c.billing_id}</span>
+                                   </div>
                                 </div>
-                                <div className="flex flex-col">
-                                   <span className="text-sm font-black text-white group-hover:text-blue-500 transition-colors italic uppercase">{c.name}</span>
-                                   <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">{c.billing_id}</span>
+                             </td>
+                             <td className="px-6 md:px-10 py-6 text-sm font-bold text-zinc-400 font-mono tracking-tighter truncate">{c.pppoe_username}</td>
+                             <td className="px-6 md:px-10 py-6">
+                                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${
+                                  isOnline ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                }`}>
+                                  <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                                  {status}
                                 </div>
-                             </div>
-                          </td>
-                          <td className="px-10 py-6 text-sm font-bold text-zinc-400 font-mono tracking-tighter">{c.pppoe_username}</td>
-                          <td className="px-10 py-6">
-                             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${
-                               isOnline ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                             }`}>
-                               <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                               {status}
-                             </div>
-                          </td>
-                          <td className="px-10 py-6">
-                             <div className="flex items-center gap-3">
-                                <Activity size={14} className="text-amber-500" />
-                                <span className="text-sm font-black text-white italic">{c.rx_live || c.metrics?.[0]?.rx_live || '---'} <small className="text-[10px] not-italic text-zinc-600">dBm</small></span>
-                             </div>
-                          </td>
-                          <td className="px-10 py-6">
-                             <button 
-                               onClick={() => setSelectedCustomer(c)}
-                               className="flex items-center gap-2 px-5 py-2.5 bg-zinc-950 border border-zinc-900 rounded-2xl text-[10px] font-black text-zinc-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all"
-                             >
-                                Analysis <ChevronRight size={14} />
-                             </button>
-                          </td>
-                      </tr>
-                    )
-                 })
-               )}
-            </tbody>
-         </table>
+                             </td>
+                             <td className="px-6 md:px-10 py-6 text-nowrap">
+                                <div className="flex items-center gap-3">
+                                   <Activity size={14} className="text-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                                   <span className="text-sm font-black text-white italic">{c.rx_live || c.metrics?.[0]?.rx_live || '---'} <small className="text-[10px] not-italic text-zinc-600 font-bold">dBm</small></span>
+                                </div>
+                             </td>
+                             <td className="px-6 md:px-10 py-6">
+                                <button 
+                                  onClick={() => setSelectedCustomer(c)}
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-zinc-950 border border-zinc-900 rounded-2xl text-[10px] font-black text-zinc-600 uppercase tracking-widest hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all whitespace-nowrap"
+                                >
+                                   Analysis <ChevronRight size={14} />
+                                </button>
+                             </td>
+                         </tr>
+                       )
+                    })
+                  )}
+               </tbody>
+            </table>
+         </div>
       </div>
 
       {selectedCustomer && (

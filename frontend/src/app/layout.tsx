@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Advanced FTTH Network Monitoring System",
 };
 
+import { SidebarProvider } from "@/context/sidebar-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,13 +31,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black text-zinc-50 min-h-screen flex`}
       >
-        <Sidebar />
-        <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-          <Navbar />
-          <main className="flex-1 overflow-y-auto p-6 md:p-8">
-            {children}
-          </main>
-        </div>
+        <SidebarProvider>
+          <Sidebar />
+          <div className="flex-1 flex flex-col min-h-screen overflow-hidden w-full">
+            <Navbar />
+            <main className="flex-1 overflow-y-auto p-4 md:p-8">
+              {children}
+            </main>
+          </div>
+        </SidebarProvider>
       </body>
     </html>
   );

@@ -97,22 +97,22 @@ export default function InventoryPage() {
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-[#050505] p-10 rounded-[3rem] border border-zinc-900 shadow-2xl relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 bg-[#050505] p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-zinc-900 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/5 blur-[100px] rounded-full" />
         <div className="relative">
            <div className="flex items-center gap-3 mb-4">
               <span className="bg-emerald-600/10 text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border border-emerald-600/20">Asset Repository</span>
            </div>
-           <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-2">Device Inventory</h1>
+           <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight uppercase italic mb-2">Device Inventory</h1>
            <p className="text-zinc-500 text-sm font-medium">Manage OLTs, Routers, ODC Cabinets, and ODP Terminals.</p>
         </div>
         
-        <div className="flex items-center gap-4 relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative">
            <button 
              onClick={handleSync}
              disabled={syncing}
              className={cn(
-               "flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
+               "flex items-center justify-center gap-3 px-6 md:px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
                syncing ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-zinc-950 text-emerald-500 border border-emerald-500/20 hover:border-emerald-500/40 shadow-emerald-500/5"
              )}
            >
@@ -123,7 +123,7 @@ export default function InventoryPage() {
              onClick={handleDiscovery}
              disabled={discovering}
              className={cn(
-               "flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
+               "flex items-center justify-center gap-3 px-6 md:px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
                discovering ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20"
              )}
            >
@@ -132,7 +132,7 @@ export default function InventoryPage() {
            </button>
            <button 
              onClick={() => setIsModalOpen(true)}
-             className="flex items-center gap-3 bg-zinc-950 text-zinc-400 border border-zinc-900 hover:bg-zinc-900 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+             className="flex items-center justify-center gap-3 bg-zinc-950 text-zinc-400 border border-zinc-900 hover:bg-zinc-900 px-6 md:px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
            >
              <Plus className="h-4 w-4" />
              Add Equipment
@@ -141,7 +141,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-2 bg-[#050505] border border-zinc-900 p-2 rounded-[1.5rem] w-fit">
+      <div className="flex items-center gap-2 bg-[#050505] border border-zinc-900 p-2 rounded-[1.5rem] w-full md:w-fit overflow-x-auto custom-scrollbar no-scrollbar-buttons">
         {(['OLT', 'ODC', 'ODP', 'ROUTER'] as Tab[]).map((tab) => {
           const Icon = tab === 'OLT' ? Server : tab === 'ODC' ? Box : tab === 'ODP' ? MapPin : Activity;
           return (
@@ -149,7 +149,7 @@ export default function InventoryPage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex items-center gap-3 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                "flex items-center gap-3 px-6 md:px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 shrink-0",
                 activeTab === tab 
                   ? "bg-zinc-900 text-white border border-zinc-800 shadow-xl" 
                   : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50"
@@ -189,48 +189,50 @@ function InventoryTable({ columns, data, type }: { columns: string[], data: any[
   if (!data.length) return <div className="p-20 text-center text-zinc-700 text-[10px] font-black uppercase tracking-widest italic">No {type} assets found in registry.</div>;
   
   return (
-    <table className="w-full text-left">
-      <thead>
-        <tr className="border-b border-zinc-900 bg-zinc-950/20">
-          {columns.map(col => <th key={col} className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{col}</th>)}
-          <th className="px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] text-right">Settings</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-zinc-900/50">
-        {data.map((item: any) => (
-          <tr key={item.id} className="group hover:bg-zinc-900/20 transition-all">
-             <td className="px-10 py-6">
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(item.id);
-                    alert("ID Copied: " + item.id);
-                  }}
-                  className="text-[10px] font-mono text-zinc-600 hover:text-blue-500 transition-colors"
-                  title="Click to copy ID"
-                >
-                  {item.id.slice(0, 8)}...
-                </button>
-             </td>
-             <td className="px-10 py-6">
-                <span className="text-sm font-black text-white italic group-hover:text-emerald-500 transition-colors uppercase tracking-tight">{item.name}</span>
-             </td>
-             <td className="px-10 py-6">
-                <span className="text-sm font-bold text-zinc-400 font-mono tracking-tighter">
-                  {type === 'ODC' || type === 'ODP' 
-                    ? `${item.location_lat?.toFixed(4)}, ${item.location_long?.toFixed(4)}`
-                    : item.ip_address || item.odc_id?.slice(0,8) || '---'}
-                </span>
-             </td>
-             <td className="px-10 py-6">
-                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{item.type || item.total_ports || item.api_port || '---'}</span>
-             </td>
-             <td className="px-10 py-6 text-right">
-                <button className="p-3 text-zinc-700 hover:text-white transition-colors"><MoreVertical size={16} /></button>
-             </td>
+    <div className="overflow-x-auto custom-scrollbar">
+      <table className="w-full text-left min-w-[800px]">
+        <thead>
+          <tr className="border-b border-zinc-900 bg-zinc-950/20">
+            {columns.map(col => <th key={col} className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{col}</th>)}
+            <th className="px-6 md:px-10 py-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] text-right">Settings</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="divide-y divide-zinc-900/50">
+          {data.map((item: any) => (
+            <tr key={item.id} className="group hover:bg-zinc-900/20 transition-all">
+               <td className="px-6 md:px-10 py-6">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(item.id);
+                      alert("ID Copied: " + item.id);
+                    }}
+                    className="text-[10px] font-mono text-zinc-600 hover:text-blue-500 transition-colors"
+                    title="Click to copy ID"
+                  >
+                    {item.id.slice(0, 8)}...
+                  </button>
+               </td>
+               <td className="px-6 md:px-10 py-6">
+                  <span className="text-sm font-black text-white italic group-hover:text-emerald-500 transition-colors uppercase tracking-tight">{item.name}</span>
+               </td>
+               <td className="px-6 md:px-10 py-6">
+                  <span className="text-sm font-bold text-zinc-400 font-mono tracking-tighter">
+                    {type === 'ODC' || type === 'ODP' 
+                      ? `${item.location_lat?.toFixed(4)}, ${item.location_long?.toFixed(4)}`
+                      : item.ip_address || item.odc_id?.slice(0,8) || '---'}
+                  </span>
+               </td>
+               <td className="px-6 md:px-10 py-6">
+                  <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest text-nowrap">{item.type || item.total_ports || item.api_port || '---'}</span>
+               </td>
+               <td className="px-6 md:px-10 py-6 text-right">
+                  <button className="p-3 text-zinc-700 hover:text-white transition-colors"><MoreVertical size={16} /></button>
+               </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -280,9 +282,9 @@ function AddEquipmentModal({ type, onClose, onRefresh }: { type: Tab, onClose: (
   };
 
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-12">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-[#050505] border border-zinc-900 rounded-[3rem] p-12 shadow-2xl animate-in zoom-in-95 duration-500">
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 md:p-12 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-[#050505] border border-zinc-900 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl animate-in zoom-in-95 duration-500 my-8">
          <div className="flex items-center justify-between mb-10">
             <div>
                <h2 className="text-2xl font-black text-white tracking-tight uppercase italic mb-1">Add {type}</h2>
@@ -291,11 +293,11 @@ function AddEquipmentModal({ type, onClose, onRefresh }: { type: Tab, onClose: (
             <button onClick={onClose} className="p-4 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-500 hover:text-white rounded-2xl transition-all"><X size={20} /></button>
          </div>
 
-         <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-2 gap-8">
+         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-2">Display Name</label>
-                  <input required placeholder="OLT-MAWAR-01" className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                  <input required placeholder="OLT-MAWAR-01" className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-6 py-4 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all font-bold" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                </div>
                <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-2">Management IP</label>
