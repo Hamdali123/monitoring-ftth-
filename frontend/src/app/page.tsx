@@ -34,8 +34,10 @@ export default function Dashboard() {
   const [activeView, setActiveView] = useState<"map" | "provisioning">("map");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [role, setRole] = useState<string>("admin");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const roleCookie = document.cookie
       .split("; ")
       .find((row) => row.startsWith("ftth_role="))
@@ -104,7 +106,7 @@ export default function Dashboard() {
             >
               <MapIcon size={14} /> <span className="whitespace-nowrap">GIS View</span>
             </button>
-            {role !== 'technician' && (
+            {mounted && role !== 'technician' && (
               <button 
                 onClick={() => setActiveView("provisioning")}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${

@@ -9,8 +9,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const roleCookie = document.cookie
       .split("; ")
       .find((row) => row.startsWith("ftth_role="))
@@ -34,6 +36,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       }
     }
   }, [pathname, router]);
+
+  if (!mounted) return null;
 
   return <>{children}</>;
 }
