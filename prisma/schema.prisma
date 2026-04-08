@@ -27,8 +27,12 @@ model Olt {
   ip_address     String
   snmp_community String
   snmp_version   String     @default("v2c")
+  snmp_port      Int        @default(161)
+  telnet_port    Int        @default(23)
   telnet_user    String?
   telnet_pass    String?
+  location_lat   Float?
+  location_long  Float?
   type           OltType
   customers      Customer[]
   created_at     DateTime   @default(now())
@@ -39,8 +43,10 @@ model Router {
   id             String     @id @default(uuid())
   name           String
   ip_address     String
+  vpn_address    String?    // Added for remote access behind NAT
   username       String
   password       String
+  secret         String?    // Radius Secret
   api_port       Int        @default(8728)
   location_lat   Float?
   location_long  Float?
@@ -102,6 +108,16 @@ model OnuMetrics {
   tx_live     Float?
   status      OnuStatus
   created_at  DateTime  @default(now())
+}
+
+model GenieAcs {
+  id         String   @id @default(uuid())
+  name       String   @default("Default ACS")
+  ip_address String
+  port       Int      @default(7557)
+  api_port   Int      @default(7557)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model Notification {

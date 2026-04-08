@@ -40,10 +40,18 @@ export function startSnmpWorker() {
               data: {
                 customer_id: result.customer_id,
                 rx_live: result.rx_live,
-                tx_live: 0, // TX Power is harder to fetch, keeping as dummy for now or omit
-                status: result.status,
+                tx_live: 0,
+                status: result.status as any,
               },
             });
+
+            // Update modem_ip in customer record if found
+            if (result.modem_ip) {
+              await prisma.customer.update({
+                where: { id: result.customer_id },
+                data: { modem_ip: result.modem_ip }
+              });
+            }
           }
           console.log(`  -> Recorded metrics for ${oltResults.length} customers on ${olt.name}.`);
         } catch (error: any) {

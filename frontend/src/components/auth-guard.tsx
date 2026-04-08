@@ -37,7 +37,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center" suppressHydrationWarning>
+        <div className="w-8 h-8 border-4 border-zinc-800 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

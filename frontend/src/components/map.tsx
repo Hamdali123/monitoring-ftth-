@@ -43,6 +43,13 @@ const RouterIcon = L.divIcon({
   iconAnchor: [22, 30],
 });
 
+const OltIcon = L.divIcon({
+  className: "custom-olt-icon",
+  html: `<div style="background-color: #8b5cf6; width: 18px; height: 18px; border-radius: 4px; border: 2px solid #fff; box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 900;">OLT</div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
 interface MapProps {
   data: any[];
   onSelectCustomer: (customer: any) => void;
@@ -58,18 +65,22 @@ export default function Map({ data, onSelectCustomer }: MapProps) {
 
   if (!mounted) {
     return (
-      <div className="h-full w-full bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-400 text-xs font-bold uppercase tracking-widest animate-pulse">Initializing Map Engine...</div>
+      <div className="h-full w-full bg-[#09090b] flex items-center justify-center">
+        <div className="text-zinc-700 text-xs font-black uppercase tracking-widest animate-pulse">Initializing GIS Engine...</div>
       </div>
     );
   }
 
   const defaultCenter: [number, number] = [-6.1285, 106.46358];
-  const router = data.find(i => i.type === 'ROUTER');
-  const center = router ? router.location : (data.length > 0 ? (data[0].location as [number, number]) : defaultCenter);
+  const routerNode = data.find(i => i.type === 'ROUTER');
+  const center = routerNode ? routerNode.location : (data.length > 0 ? (data[0].location as [number, number]) : defaultCenter);
+
+  // Helper to find parent nodes for drawing cables
+  const oltNodes = data.filter(i => i.type === 'OLT');
+  const routerNodes = data.filter(i => i.type === 'ROUTER');
 
   return (
-    <div className="h-full w-full relative overflow-hidden rounded-3xl border border-slate-200 shadow-inner">
+    <div className="h-full w-full relative overflow-hidden rounded-[2.5rem] border border-zinc-900 shadow-2xl bg-black">
       <MapContainer 
         center={center} 
         zoom={14} 
@@ -94,55 +105,201 @@ export default function Map({ data, onSelectCustomer }: MapProps) {
               maxNativeZoom={19}
             />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Street View (Standard)">
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              maxZoom={20}
-              maxNativeZoom={19}
-            />
-          </LayersControl.BaseLayer>
         </LayersControl>
         
         {data.map((item) => {
+          if (item.location && item.location[0] === 0 && item.location[1] === 0) return null;
+
           if (item.type === 'ROUTER') {
             return (
               <Marker key={item.id} position={item.location} icon={RouterIcon}>
-                <Popup>
-                  <div className="p-1">
-                    <h3 className="text-[10px] font-black uppercase text-amber-600">Core Router</h3>
-                    <p className="text-xs font-bold">{item.name}</p>
-                  </div>
+                <Popup className="premium-popup">
+                   <div className="p-2 bg-zinc-950 text-white rounded-lg border border-zinc-800">
+                      <h3 className="text-[9px] font-black uppercase text-amber-500 tracking-tighter">Core Backbone</h3>
+                      <p className="text-xs font-bold">{item.name}</p>
+                   </div>
                 </Popup>
               </Marker>
             );
           }
 
+          if (item.type === 'OLT') {
+            return (
+              <div key={item.id}>
+                <Marker position={item.location} icon={OltIcon}>
+                  <Popup className="premium-popup">
+                    <div className="p-2 bg-zinc-950 text-white rounded-lg border border-zinc-800">
+                      <h3 className="text-[9px] font-black uppercase text-purple-500 tracking-tighter">OLT Terminal</h3>
+                      <p className="text-xs font-bold">{item.name}</p>
+                      <span className="text-[8px] text-zinc-500 font-bold">{item.vendor} - {item.ip_address}</span>
+                    </div>
+                  </Popup>
+                </Marker>
+                
+                {/* Cable Router -> OLT (Backbone) */}
+                {routerNodes.map(r => (
+                  <Polyline 
+                    key={`backbone-${item.id}-${r.id}`}
+                    positions={[r.location, item.location]} 
+                    pathOptions={{ color: '#f59e0b', weight: 4, opacity: 0.8 }}
+                  />
+                ))}
+              </div>
+            );
+          }
+
           if (item.type === 'ODP') {
+            // Find closest OLT for cable visualization if olt_id not explicitly set
+            const parentOlt = item.olt_id ? oltNodes.find(o => o.id === item.olt_id) : oltNodes[0];
+
             return (
               <div key={item.id}>
                 <Marker position={item.location} icon={OdpIcon}>
-                  <Popup>
-                    <div className="p-1 min-w-[120px]">
-                      <h3 className="text-[10px] font-black uppercase text-blue-600 mb-1">ODP {item.name}</h3>
-                      <p className="text-[10px] text-slate-500 font-bold">Ports: {item.total_ports}</p>
+                  <Popup className="premium-popup">
+                    <div className="p-2 bg-zinc-950 text-white rounded-lg border border-zinc-800">
+                      <h3 className="text-[9px] font-black uppercase text-blue-500 mb-1">ODP {item.name}</h3>
+                      <p className="text-[10px] text-zinc-500 font-bold">Standard Capacity: {item.total_ports} Ports</p>
                     </div>
                   </Popup>
                 </Marker>
 
-                {item.customers?.map((customer: any) => (
-                  <div key={customer.id}>
-                    <Marker 
-                      position={customer.location} 
-                      icon={CustomerIcon(customer.status)}
-                      eventHandlers={{
-                        click: () => onSelectCustomer({ ...customer, odp_name: item.name })
-                      }}
-                    >
-                      <Popup>
-                        <div className="p-1">
-                          <p className="text-[10px] font-black">{customer.name}</p>
-                          <p className={`text-[10px] font-bold ${customer.status === 'ONLINE' ? 'text-emerald-500' : 'text-rose-500'}`}>{customer.status}</p>
+                {/* Cable OLT -> ODP */}
+                {parentOlt && (
+                  <Polyline 
+                    positions={[parentOlt.location, item.location]} 
+                    pathOptions={{ color: '#8b5cf6', weight: 3, opacity: 0.6, dashArray: '10, 10' }}
+                  />
+                )}
+
+                {item.customers?.map((customer: any) => {
+                  if (customer.location && customer.location[0] === 0 && customer.location[1] === 0) return null;
+                  return (
+                    <div key={customer.id}>
+                      <Marker 
+                        position={customer.location} 
+                        icon={CustomerIcon(customer.status)}
+                        eventHandlers={{
+                          click: () => onSelectCustomer({ ...customer, odp_name: item.name })
+                        }}
+                      >
+                      <Popup className="premium-popup">
+                        <div className="w-[280px] bg-zinc-950 p-4 rounded-xl space-y-4 border border-zinc-800 shadow-2xl">
+                          {/* Header */}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-white font-black text-sm uppercase tracking-tight">{customer.name}</h3>
+                              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">ID: {customer.billing_id}</p>
+                            </div>
+                            <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${customer.status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
+                              {customer.status}
+                            </div>
+                          </div>
+
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-2 gap-2">
+                             <div className="bg-zinc-900/50 p-2 rounded-lg border border-zinc-800/50">
+                                <span className="text-[8px] text-zinc-500 font-black uppercase tracking-widest block mb-1">Signal (RX)</span>
+                                <span className={`text-xs font-black ${customer.rx_live < -27 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                   {customer.rx_live || '--'} dBm
+                                </span>
+                             </div>
+                             <div className="bg-zinc-900/50 p-2 rounded-lg border border-zinc-800/50">
+                                <span className="text-[8px] text-zinc-500 font-black uppercase tracking-widest block mb-1">Modem IP</span>
+                                <span className="text-xs font-black text-blue-400">
+                                   {customer.modem_ip || 'No IP'}
+                                </span>
+                             </div>
+                          </div>
+
+                          {/* Info List */}
+                          <div className="space-y-1.5 pt-2 border-t border-zinc-800/50">
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-zinc-500 font-bold uppercase tracking-widest">PPPoE User</span>
+                                <span className="text-zinc-300 font-black">{customer.pppoe_username}</span>
+                             </div>
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-zinc-500 font-bold uppercase tracking-widest">SN / MAC</span>
+                                <span className="text-zinc-300 font-black">{customer.sn_mac}</span>
+                             </div>
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-zinc-500 font-bold uppercase tracking-widest">ODP Port</span>
+                                <span className="text-zinc-300 font-black">{customer.odp_port}</span>
+                             </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="grid grid-cols-2 gap-2 pt-2">
+                             <button 
+                               onClick={async (e) => {
+                                 e.stopPropagation();
+                                 if (confirm(`Reboot ONU for ${customer.name}?`)) {
+                                   try {
+                                     const res = await fetch(`http://localhost:3000/api/customers/${customer.id}/reboot`, { method: 'POST' });
+                                     const data = await res.json();
+                                     alert(data.message || data.error);
+                                   } catch (err: any) { alert(`Reboot failed: ${err.message}`); }
+                                 }
+                               }}
+                               className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 p-2 rounded-lg flex flex-col items-center gap-1 transition-all group"
+                             >
+                                <div className="h-2 w-2 rounded-full bg-blue-500 group-hover:shadow-[0_0_8px_#3b82f6]"></div>
+                                <span className="text-[8px] font-black text-white uppercase tracking-widest">Reboot</span>
+                             </button>
+                             <button 
+                               onClick={async (e) => {
+                                 e.stopPropagation();
+                                 const ssid = prompt("Enter new SSID:");
+                                 const pw = prompt("Enter new WiFi Password:");
+                                 if (ssid && pw) {
+                                   try {
+                                     const res = await fetch(`http://localhost:3000/api/customers/${customer.id}/change-wifi`, {
+                                       method: 'POST',
+                                       headers: { 'Content-Type': 'application/json' },
+                                       body: JSON.stringify({ new_ssid: ssid, new_password: pw })
+                                     });
+                                     const data = await res.json();
+                                     alert(data.message || data.error);
+                                   } catch (err: any) { alert(`Update failed: ${err.message}`); }
+                                 }
+                               }}
+                               className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 p-2 rounded-lg flex flex-col items-center gap-1 transition-all group"
+                             >
+                                <div className="h-2 w-2 rounded-full bg-amber-500 group-hover:shadow-[0_0_8px_#f59e0b]"></div>
+                                <span className="text-[8px] font-black text-white uppercase tracking-widest">WIFI PW</span>
+                             </button>
+                             <button 
+                               onClick={async (e) => {
+                                 e.stopPropagation();
+                                 const pw = prompt("Enter new PPPoE Password:");
+                                 if (pw) {
+                                   try {
+                                     const res = await fetch(`http://localhost:3000/api/customers/${customer.id}/change-pppoe`, {
+                                       method: 'POST',
+                                       headers: { 'Content-Type': 'application/json' },
+                                       body: JSON.stringify({ new_password: pw })
+                                     });
+                                     const data = await res.json();
+                                     alert(data.message || data.error);
+                                   } catch (err: any) { alert(`Update failed: ${err.message}`); }
+                                 }
+                               }}
+                               className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 p-2 rounded-lg flex flex-col items-center gap-1 transition-all group"
+                             >
+                                <div className="h-2 w-2 rounded-full bg-emerald-500 group-hover:shadow-[0_0_8px_#10b981]"></div>
+                                <span className="text-[8px] font-black text-white uppercase tracking-widest">PPPoE PW</span>
+                             </button>
+                             <button 
+                               disabled={!customer.modem_ip}
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 if (customer.modem_ip) window.open(`http://${customer.modem_ip}`, '_blank');
+                               }}
+                               className={`bg-zinc-900 border border-zinc-800 p-2 rounded-lg flex flex-col items-center gap-1 transition-all group ${!customer.modem_ip ? 'opacity-30 grayscale cursor-not-allowed' : 'hover:bg-zinc-800'}`}
+                             >
+                                <div className="h-2 w-2 rounded-full bg-zinc-400 group-hover:shadow-[0_0_8px_#ffffff]"></div>
+                                <span className="text-[8px] font-black text-white uppercase tracking-widest">Login ONT</span>
+                             </button>
+                          </div>
                         </div>
                       </Popup>
                     </Marker>
@@ -156,7 +313,8 @@ export default function Map({ data, onSelectCustomer }: MapProps) {
                       }}
                     />
                   </div>
-                ))}
+                  );
+                })}
               </div>
             );
           }

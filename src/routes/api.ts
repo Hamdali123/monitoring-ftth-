@@ -5,6 +5,12 @@ import { syncPppoeToCustomers, updateMikrotikPppoePassword } from '../services/m
 import { runGlobalSync } from '../services/sync-worker.js';
 import { runTopologyDiscovery } from '../services/discovery.js';
 import { createNotification } from '../services/notifications.js';
+import { testOltConnection, testRouterConnection } from '../services/diagnostics.js';
+import { 
+  fetchOnuIndexMap, 
+  pollOltAdvanced, 
+  discoverAllOnus 
+} from '../services/olt-manager.js';
 
 const router = Router();
 
@@ -143,26 +149,27 @@ router.post('/provisioning', async (req: Request, res: Response) => {
 // Endpoint to fetch all ODPs and Customers, returning structured data to draw the map and lines.
 router.get('/network-map', async (req: Request, res: Response) => {
   try {
-    const odps = await prisma.odp.findMany({
-      include: {
-        customers: {
-          include: {
-            metrics: {
-              orderBy: { created_at: 'desc' },
-              take: 1, // Only get the latest metric
-            },
-          },
-        },
-      },
-    });
+    const [odps, olts, routers] = await Promise.all([
+      prisma.odp.findMany({
+        include: {
+          customers: {
+            include: {
+              metrics: { orderBy: { created_at: 'desc' }, take: 1 }
+            }
+          }
+        }
+      }),
+      prisma.olt.findMany(),
+      (prisma as any).router.findMany()
+    ]);
 
-    // We can format this to be map-friendly
-    const mapData = odps.map(odp => ({
+    const odpData = odps.map(odp => ({
       id: odp.id,
       name: odp.name,
       location: [odp.location_lat, odp.location_long],
       type: 'ODP',
       total_ports: odp.total_ports,
+      olt_id: odp.customers[0]?.olt_id || null,
       customers: odp.customers.map(c => {
         const latestMetric = c.metrics[0];
         return {
@@ -172,25 +179,131 @@ router.get('/network-map', async (req: Request, res: Response) => {
           type: 'CUSTOMER',
           status: latestMetric ? latestMetric.status : 'OFFLINE',
           rx_live: latestMetric ? latestMetric.rx_live : null,
-          rx_installation: c.rx_installation,
-          odp_port: c.odp_port,
+          pppoe_username: c.pppoe_username,
+          sn_mac: c.sn_mac,
+          billing_id: c.billing_id
         };
       }),
     }));
 
-    const routers = await (prisma as any).router.findMany();
-    const routerData = routers.map((r: any) => ({
+    const oltData = olts.map(o => ({
+      id: o.id,
+      name: o.name,
+      location: [o.location_lat || -6.1285, o.location_long || 106.46358],
+      type: 'OLT',
+      vendor: o.type,
+      ip_address: o.ip_address
+    }));
+
+    const routerData = (routers as any[]).map(r => ({
       id: r.id,
       name: r.name,
       location: [r.location_lat || -6.1285, r.location_long || 106.46358],
       type: 'ROUTER',
-      status: 'ONLINE'
+      ip_address: r.ip_address
     }));
 
-    res.json({ data: [...mapData, ...routerData] });
+    res.json({ data: [...odpData, ...oltData, ...routerData] });
   } catch (error: any) {
-    console.error('Network Map Error:', error);
     res.status(500).json({ error: 'Failed to fetch network map' });
+  }
+});
+
+// --- Device Management (Routers) ---
+
+router.get('/routers', async (req, res) => {
+  try {
+    const routers = await (prisma as any).router.findMany();
+    res.json(routers);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/routers', async (req, res) => {
+  try {
+    const { name, ip_address, vpn_address, username, password, secret, api_port, location_lat, location_long } = req.body;
+    const router = await (prisma as any).router.create({
+      data: { 
+        name, 
+        ip_address, 
+        vpn_address, 
+        username, 
+        password, 
+        secret, 
+        api_port: parseInt(api_port) || 8728,
+        location_lat: parseFloat(location_lat) || 0,
+        location_long: parseFloat(location_long) || 0
+      }
+    });
+    res.json(router);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/routers/:id', async (req, res) => {
+  try {
+    const { name, ip_address, vpn_address, username, password, secret, api_port, location_lat, location_long } = req.body;
+    
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (ip_address !== undefined) updateData.ip_address = ip_address;
+    if (vpn_address !== undefined) updateData.vpn_address = vpn_address;
+    if (username !== undefined) updateData.username = username;
+    if (password !== undefined) updateData.password = password;
+    if (secret !== undefined) updateData.secret = secret;
+    if (api_port !== undefined) updateData.api_port = parseInt(api_port) || 8728;
+    if (location_lat !== undefined) updateData.location_lat = parseFloat(location_lat) || 0;
+    if (location_long !== undefined) updateData.location_long = parseFloat(location_long) || 0;
+
+    const router = await (prisma as any).router.update({
+      where: { id: req.params.id },
+      data: updateData
+    });
+    res.json(router);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/routers/:id', async (req, res) => {
+  try {
+    await (prisma as any).router.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- GenieACS Settings ---
+
+router.get('/genieacs', async (req, res) => {
+  try {
+    const settings = await (prisma as any).genieAcs.findFirst();
+    res.json(settings || { ip_address: '', port: 7557, api_port: 7557 });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/genieacs', async (req, res) => {
+  try {
+    const { ip_address, port, api_port } = req.body;
+    let settings = await (prisma as any).genieAcs.findFirst();
+    if (settings) {
+      settings = await (prisma as any).genieAcs.update({
+        where: { id: settings.id },
+        data: { ip_address, port: parseInt(port), api_port: parseInt(api_port) }
+      });
+    } else {
+      settings = await (prisma as any).genieAcs.create({
+        data: { ip_address, port: parseInt(port), api_port: parseInt(api_port) }
+      });
+    }
+    res.json(settings);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -220,7 +333,12 @@ router.post('/customers/:id/change-wifi', async (req, res) => {
 
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
 
-    const acsUrl = process.env.GENIE_ACS_URL || 'http://localhost:7557';
+    const acsConfig = await (prisma as any).genieAcs.findFirst();
+    if (!acsConfig || !acsConfig.ip_address) {
+       return res.status(400).json({ error: 'GenieACS not configured in Settings' });
+    }
+
+    const acsUrl = `http://${acsConfig.ip_address}:${acsConfig.api_port}`;
     const acsTasksUrl = `${acsUrl}/devices/${encodeURIComponent(customer.sn_mac)}/tasks`;
 
     const wifiParameters = [
@@ -234,7 +352,7 @@ router.post('/customers/:id/change-wifi', async (req, res) => {
       body: JSON.stringify({ name: 'setParameterValues', parameterValues: wifiParameters }),
     });
 
-    if (!response.ok) throw new Error('ACS communication failure');
+    if (!response.ok) throw new Error(`ACS communication failure: ${response.statusText}`);
 
     res.json({ message: 'WiFi change task queued via TR-069' });
   } catch (error: any) {
@@ -254,26 +372,50 @@ router.get('/olts', async (req, res) => {
 
 router.post('/olts', async (req, res) => {
   try {
-    const { name, ip_address, snmp_community, type } = req.body;
-    const newOlt = await prisma.olt.create({
-      data: { name, ip_address, snmp_community, type },
+    const { name, ip_address, snmp_community, snmp_version, snmp_port, type, location_lat, location_long, telnet_user, telnet_pass, telnet_port } = req.body;
+    const newOlt = await (prisma.olt as any).create({
+      data: { 
+        name, 
+        ip_address, 
+        snmp_community,
+        snmp_version: snmp_version || 'v2c',
+        snmp_port: parseInt(snmp_port) || 161,
+        type,
+        location_lat: parseFloat(location_lat) || 0,
+        location_long: parseFloat(location_long) || 0,
+        telnet_user,
+        telnet_pass,
+        telnet_port: parseInt(telnet_port) || 23
+      },
     });
     res.status(201).json(newOlt);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create OLT' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to create OLT', details: error.message });
   }
 });
 
 router.put('/olts/:id', async (req, res) => {
   try {
-    const { name, ip_address, snmp_community, type } = req.body;
-    const updatedOlt = await prisma.olt.update({
+    const { name, ip_address, snmp_community, snmp_version, snmp_port, type, location_lat, location_long, telnet_user, telnet_pass, telnet_port } = req.body;
+    const updatedOlt = await (prisma.olt as any).update({
       where: { id: req.params.id },
-      data: { name, ip_address, snmp_community, type },
+      data: { 
+        name, 
+        ip_address, 
+        snmp_community,
+        snmp_version: snmp_version || 'v2c',
+        snmp_port: parseInt(snmp_port) || 161,
+        type,
+        location_lat: parseFloat(location_lat) || 0,
+        location_long: parseFloat(location_long) || 0,
+        telnet_user,
+        telnet_pass,
+        telnet_port: parseInt(telnet_port) || 23
+      },
     });
     res.json(updatedOlt);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update OLT' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to update OLT', details: error.message });
   }
 });
 
@@ -283,6 +425,15 @@ router.delete('/olts/:id', async (req, res) => {
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete OLT' });
+  }
+});
+
+router.post('/olts/:id/test', async (req, res) => {
+  try {
+    const result = await testOltConnection(req.params.id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -456,42 +607,25 @@ router.delete('/customers/:id', async (req, res) => {
   }
 });
 
-// --- Router CRUD ---
-router.get('/routers', async (req, res) => {
+// --- Global Sync ---
+
+router.post('/routers/:id/test', async (req, res) => {
   try {
-    const routers = await (prisma as any).router.findMany();
-    res.json(routers);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch routers' });
+    const result = await testRouterConnection(req.params.id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-router.post('/routers', async (req: Request, res: Response) => {
+// Sync PPPoE dari router tertentu ke database customer
+router.post('/routers/:id/sync', async (req, res) => {
   try {
-    const { name, ip_address, username, password, api_port, location_lat, location_long } = req.body;
-    const newRouter = await (prisma as any).router.create({
-      data: { 
-        name, 
-        ip_address, 
-        username, 
-        password, 
-        api_port: parseInt(api_port),
-        location_lat: parseFloat(location_lat),
-        location_long: parseFloat(location_long)
-      },
-    });
-    res.status(201).json(newRouter);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create router' });
-  }
-});
-
-router.delete('/routers/:id', async (req, res) => {
-  try {
-    await (prisma as any).router.delete({ where: { id: req.params.id } });
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete router' });
+    console.log(`[API] Manual PPPoE sync triggered for router ${req.params.id}`);
+    const result = await syncPppoeToCustomers(req.params.id);
+    res.json({ message: `Synced ${result.syncedCount} PPPoE secrets from MikroTik`, ...result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: `MikroTik sync failed: ${error.message}` });
   }
 });
 

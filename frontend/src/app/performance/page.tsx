@@ -15,15 +15,17 @@ import StatsCard from "@/components/stats-card";
 
 export default function PerformancePage() {
   const [stats, setStats] = useState<any>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/dashboard-stats", {
-      headers: { 'ngrok-skip-browser-warning': 'true' }
-    })
-      .then(r => r.json())
-      .then(data => {
-        setStats(data);
+    Promise.all([
+      fetch("/api/dashboard-stats", { headers: { 'ngrok-skip-browser-warning': 'true' } }).then(r => r.json()),
+      fetch("/api/notifications", { headers: { 'ngrok-skip-browser-warning': 'true' } }).then(r => r.json())
+    ])
+      .then(([statsData, notifsData]) => {
+        setStats(statsData);
+        setNotifications(Array.isArray(notifsData) ? notifsData : []);
         setLoading(false);
       })
       .catch(err => {
@@ -123,10 +125,16 @@ export default function PerformancePage() {
                   <AlertCircle size={16} className="text-rose-500" /> Critical Alerts
                </h3>
                
-               <div className="space-y-4">
-                  <AlertItem title="Fiber Cut detected - ODP-09" time="2m ago" priority="High" />
-                  <AlertItem title="ZTE OLT-Main High Latency" time="15m ago" priority="Med" />
-                  <AlertItem title="Sync Failure: RouterOS-X86" time="1h ago" priority="Low" />
+               <div className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar">
+                  {notifications.length > 0 ? (
+                    notifications.map((n: any) => {
+                      const prio = n.type === 'ALERT' || n.type === 'CRIT' ? 'High' : n.type === 'WARN' ? 'Med' : 'Low';
+                      const time = new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      return <AlertItem key={n.id} title={n.title} time={time} priority={prio} />;
+                    })
+                  ) : (
+                    <p className="text-zinc-500 text-xs italic px-2">Tidak ada log alert saat ini.</p>
+                  )}
                </div>
             </div>
          </div>

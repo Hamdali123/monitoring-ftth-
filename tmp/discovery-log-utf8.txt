@@ -1,0 +1,10 @@
+﻿--- Debugging Topology Discovery ---
+[Discovery] Starting global topology reconstruction...
+[Discovery] Scanning OLT: C600-SANWANI...
+[SNMP] Found 0 ONU indices on C600-SANWANI
+Discovery Results: {
+  "newCustomers": 0,
+  "newOdps": 0,
+  "newOdcs": 0,
+  "errors": []
+}

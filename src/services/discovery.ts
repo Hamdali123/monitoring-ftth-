@@ -48,24 +48,34 @@ export async function runTopologyDiscovery() {
       if (existing) continue;
 
       // Unmanaged ONU found! Try to find a MikroTik secret with this SN in the comment
+      const snUpper = phy.sn.toUpperCase();
       const matchingSecret = allSecrets.find(s => 
-        (s.comment && s.comment.toUpperCase().includes(phy.sn)) ||
-        (s.service && s.service.toUpperCase() === phy.sn)
+        (s.comment && s.comment.toUpperCase().includes(snUpper)) ||
+        (s.service && s.service.toUpperCase() === snUpper)
       );
 
       // Metadata for the new customer
       const pppoeUser = matchingSecret ? matchingSecret.name : `SN-${phy.sn.slice(-4)}`;
-      const comment = matchingSecret ? (matchingSecret.comment || '') : `Discovered ONU ${phy.sn}`;
+      const comment = (matchingSecret && matchingSecret.comment) 
+        ? matchingSecret.comment 
+        : (phy.description || `Discovered ONU ${phy.sn}`);
+      
       const routerId = matchingSecret ? matchingSecret.routerId : null;
 
       // Heuristic: Find/Create ODP for this new client
+      // 1. Try to find ODP name in description or comment
       const odpMatch = comment.match(/ODP-[\w-]+/i);
-      const odpName = odpMatch ? odpMatch[0].toUpperCase() : 'ODP-DISCOVERED';
+      const odpName = odpMatch ? odpMatch[0].toUpperCase() : 'ODP-AUTO-DISCOVERED';
+
+      // 2. Fetch OLT to use its coordinates as reference
+      const oltRef = await prisma.olt.findUnique({ where: { id: phy.oltId } });
+      const baseLat = oltRef?.location_lat || -6.1285;
+      const baseLong = oltRef?.location_long || 106.46358;
 
       let odc = await (prisma.odc as any).findFirst();
       if (!odc) {
         odc = await (prisma.odc as any).create({
-          data: { name: 'HUB-DISCOVERED', location_lat: -6.1285, location_long: 106.4635 }
+          data: { name: 'BACKBONE-HUB', location_lat: baseLat, location_long: baseLong }
         });
       }
 
@@ -76,8 +86,8 @@ export async function runTopologyDiscovery() {
             name: odpName, 
             odc_id: odc.id, 
             total_ports: 8,
-            location_lat: odc.location_lat + (Math.random() * 0.01 - 0.005),
-            location_long: odc.location_long + (Math.random() * 0.01 - 0.005)
+            location_lat: baseLat + (Math.random() * 0.005 - 0.0025),
+            location_long: baseLong + (Math.random() * 0.005 - 0.0025)
           }
         });
         results.newOdps++;
@@ -96,13 +106,13 @@ export async function runTopologyDiscovery() {
           router_id: routerId,
           location_lat: odp.location_lat + (Math.random() * 0.002 - 0.001),
           location_long: odp.location_long + (Math.random() * 0.002 - 0.001),
-          rx_installation: -20
+          rx_installation: -22
         }
       });
 
       await createNotification(
         'New Client Discovered',
-        `Physical ONU ${phy.sn} discovered on OLT. Mapped to ${pppoeUser} and placed in ${odpName}.`,
+        `Physical ONU ${phy.sn} discovered on ${oltRef?.name}. Mapped to ${pppoeUser}.`,
         'NEW_CLIENT',
         'INFO'
       );
